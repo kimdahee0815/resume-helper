@@ -26,14 +26,19 @@ def make_claude_client() -> Anthropic:
     return Anthropic(api_key=api_key)
 
 RESUME_SYSTEM_PROMPT = """
-너는 한국 채용 맥락을 이해하는 자소서 첨삭 전문가입니다.
-사용자가 입력한 자기소개서 또는 지원동기를 읽고, 구체적인 개선 방향을 한국어로 제안합니다.
-
-첨삭할 때 참고할 기준:
-- 한국 자소서 구조: ①성장과정 ②성격의 장단점 ③지원동기 ④직무역량/경험 ⑤입사 후 포부
-- 6대 결함 중 확인 항목: (1)추상적 미사여구("열심히", "최선을") (2)근거 없는 자기주장("책임감이 강합니다") (3)지원 직무와 무관한 경험 나열
-- 서술 프레임: STAR(Situation→Task→Action→Result) 우선 적용, 짧은 문항은 PREP(Point→Reason→Example→Point) 보완
-- 블라인드 채용 주의 개인정보: 출신 학교명, 나이/생년월일, 가족관계, 거주지역, 사진/외모 언급
+"당신은 한국 채용 시장 전문 자기소개서 첨삭 코치입니다.\n"
+            "아래 기준으로 입력된 자소서를 분석하고 한국어로 피드백을 제공합니다.\n\n"
+            "1. 서술 프레임: STAR(상황→과제→행동→결과), PREP(주장→근거→예시→재주장), "
+            "CAR(맥락→행동→결과) 중 적합한 방식을 적용해 개선안을 제시합니다.\n"
+            "2. NCS 역량 기반 분석: 의사소통, 문제해결, 자원관리, 대인관계, "
+            "정보활용, 기술 역량이 드러나는지 확인합니다.\n"
+            "3. 6대 결함 탐지:\n"
+            "   - 추상적 표현 (열심히, 최선을, 노력했습니다)\n"
+            "   - 정량 지표 부재 (수치·기간·규모 없음)\n"
+            "   - 직무 키워드 미스매치 (JD와 무관한 경험)\n"
+            "   - 자기 자랑 단방향 (기여·협업 관점 없음)\n"
+            "   - 일관성 결여 (문항 간 스토리 충돌)\n"
+            "   - 공통 템플릿 표현 (지원동기 없이 성장 포부만 나열)\n"
 """
 
 
@@ -76,24 +81,71 @@ def ask_claude_once(sample_text: str) -> str:
 
     return response.content[0].text
 
+def chat_loop():
+    print("자소서 도우미를 시작합니다. /help로 도움말, /quit으로 종료합니다.")
+    client = make_openai_client()
+    while True:
+        user_input = input("자소서 입력 > ")
+
+        command = user_input.strip()
+
+        if command == "/help":
+            help_text = """
+                [사용 방법]
+                - 자기소개서 문단을 그대로 붙여 넣으면 AI가 첨삭 제안을 드립니다.
+                - /sample : 예시 자소서로 테스트합니다.
+                - /quit   : 프로그램을 종료합니다.
+
+                [주의]
+                - 이름, 학교명, 생년월일 등 개인정보는 입력 전에 삭제하세요.
+                - 공개 저장소(GitHub 등)에 실제 자소서를 올리지 마세요.
+            """
+            print(help_text)
+            continue
+        
+        elif command == "/quit":
+            print("종료합니다.")
+            break
+
+        elif not command:
+            print("텍스트를 입력해 주세요. 도움말은 /help")
+            continue
+
+        else:
+            messages=[
+                {"role":"system", "content":RESUME_SYSTEM_PROMPT},
+                {"role":"user", "content":user_input}
+            ]
+
+            response = client.chat.completions.create(
+                model="gpt-5.4-nano",
+                max_completion_tokens=700,
+                messages=messages
+            )
+
+            answer = response.choices[0].message.content
+            print(answer)
+
 def main() -> None:
     settings = load_settings()
     print("OpenAI key ready:", settings["openai_key_exists"])
     print("Claude key ready:", settings["anthropic_key_exists"])
     sample_text = get_sample_resume()
-    provider = input("사용할 제공사(openai/claude)를 입력하세요: ").strip().lower()
+    # provider = input("사용할 제공사(openai/claude)를 입력하세요: ").strip().lower()
 
-    if provider == "openai":
-        result = ask_openai_once(sample_text)
-    elif provider == "claude":
-        result = ask_claude_once(sample_text)
-    else:
-        print("openai 또는 claude 중 하나를 입력해요.")
-        return
+    # if provider == "openai":
+    #     result = ask_openai_once(sample_text)
+    # elif provider == "claude":
+    #     result = ask_claude_once(sample_text)
+    # else:
+    #     print("openai 또는 claude 중 하나를 입력해요.")
+    #     return
 
-    print("[자소서 도우미 첫 응답]")
-    print(result[:1000])
-
+    # print("[자소서 도우미 첫 응답]")
+    # print(result[:1000])
+    chat_loop()
 
 if __name__ == "__main__":
     main()
+
+# Day 2 self1에서 이 파일을 입력으로 사용하며, 다음 단계에서 /style 명령어를 추가 할 예정
