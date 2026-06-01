@@ -4,6 +4,24 @@ from openai import OpenAI
 from anthropic import Anthropic
 from styles import STYLE_PRESETS, list_style_names
 
+
+RESUME_SYSTEM_PROMPT = """
+"당신은 한국 채용 시장 전문 자기소개서 첨삭 코치입니다.\n"
+            "아래 기준으로 입력된 자소서를 분석하고 한국어로 피드백을 제공합니다.\n\n"
+            "1. 서술 프레임: STAR(상황→과제→행동→결과), PREP(주장→근거→예시→재주장), "
+            "CAR(맥락→행동→결과) 중 적합한 방식을 적용해 개선안을 제시합니다.\n"
+            "2. NCS 역량 기반 분석: 의사소통, 문제해결, 자원관리, 대인관계, "
+            "정보활용, 기술 역량이 드러나는지 확인합니다.\n"
+            "3. 6대 결함 탐지:\n"
+            "   - 추상적 표현 (열심히, 최선을, 노력했습니다)\n"
+            "   - 정량 지표 부재 (수치·기간·규모 없음)\n"
+            "   - 직무 키워드 미스매치 (JD와 무관한 경험)\n"
+            "   - 자기 자랑 단방향 (기여·협업 관점 없음)\n"
+            "   - 일관성 결여 (문항 간 스토리 충돌)\n"
+            "   - 공통 템플릿 표현 (지원동기 없이 성장 포부만 나열)\n"
+"""
+
+
 def load_settings() -> dict[str, str | None]:
     load_dotenv()
     return {
@@ -24,23 +42,6 @@ def make_claude_client() -> Anthropic:
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY가 설정되지 않았습니다.")
     return Anthropic(api_key=api_key)
-
-RESUME_SYSTEM_PROMPT = """
-"당신은 한국 채용 시장 전문 자기소개서 첨삭 코치입니다.\n"
-            "아래 기준으로 입력된 자소서를 분석하고 한국어로 피드백을 제공합니다.\n\n"
-            "1. 서술 프레임: STAR(상황→과제→행동→결과), PREP(주장→근거→예시→재주장), "
-            "CAR(맥락→행동→결과) 중 적합한 방식을 적용해 개선안을 제시합니다.\n"
-            "2. NCS 역량 기반 분석: 의사소통, 문제해결, 자원관리, 대인관계, "
-            "정보활용, 기술 역량이 드러나는지 확인합니다.\n"
-            "3. 6대 결함 탐지:\n"
-            "   - 추상적 표현 (열심히, 최선을, 노력했습니다)\n"
-            "   - 정량 지표 부재 (수치·기간·규모 없음)\n"
-            "   - 직무 키워드 미스매치 (JD와 무관한 경험)\n"
-            "   - 자기 자랑 단방향 (기여·협업 관점 없음)\n"
-            "   - 일관성 결여 (문항 간 스토리 충돌)\n"
-            "   - 공통 템플릿 표현 (지원동기 없이 성장 포부만 나열)\n"
-"""
-
 
 def get_sample_resume() -> str:
     return """
@@ -132,21 +133,34 @@ def chat_loop():
 
 current_style_key = "간결형"
 
-def handle_style_command(user_input: str) -> str:
+# def handle_style_command(user_input: str) -> str:
+#     parts = user_input.split(maxsplit=1)
+
+#     if len(parts) < 2:
+#         print("사용 가능한 스타일: ", list_style_names())
+#         return current_style_key
+
+#     style_key = parts[1].strip()
+
+#     if style_key in STYLE_PRESETS:
+#         print("현재 스타일: ", style_key)
+#         return style_key
+    
+#     print("가능한 스타일은 다음과 같습니다: ", list_style_names())
+#     return current_style_key
+
+def handle_style_command(user_input: str) -> None:
     parts = user_input.split(maxsplit=1)
-
     if len(parts) < 2:
-        print("사용 가능한 스타일: ", list_style_names())
-        return current_style_key
+        print("사용 가능한 스타일:", ", ".join(STYLE_PRESETS.keys()))
+        return
 
-    style_key = parts[1].strip()
-
+    style_key = parts[1]
     if style_key in STYLE_PRESETS:
         print("현재 스타일: ", style_key)
-        return style_key
-    
-    print("가능한 스타일은 다음과 같습니다: ", list_style_names())
-    return current_style_key
+        RESUME_SYSTEM_PROMPT = STYLE_PRESETS[style_key]["system"]
+    else:
+        print(f"알 수 없는 스타일. 가능: {', '.join(STYLE_PRESETS.keys())}")
 
 def main() -> None:
     settings = load_settings()
