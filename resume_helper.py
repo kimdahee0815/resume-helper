@@ -124,7 +124,7 @@ def chat_loop():
 
             response = client.chat.completions.create(
                 model="gpt-5.4-nano",
-                max_completion_tokens=700,
+                max_completion_tokens=1000,
                 messages=messages
             )
 
