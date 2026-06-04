@@ -57,7 +57,7 @@ triage_agent = Agent(
 MODEL_NAME = "gpt-4o-mini"
 
 revise_agent = Agent(
-    name="자소서_첨삭_Specialist",
+    name="ResumeReviseSpecialist",
     handoff_description=(
         "자소서 첨삭을 요청할 때 사용해요. "
         "STAR/PREP/CAR 기준으로 문장 개선이 필요하거나 "
@@ -87,7 +87,7 @@ revise_agent = Agent(
 )
 
 final_agent = Agent(
-    name="자소서_최종본_Specialist",
+    name="ResumeFinalSpecialist",
     handoff_description=(
         "첨삭 결과를 반영해 제출용 최종 문단을 만들 때 사용해요. "
         "완성된 자소서 문단이 필요하거나 최종본 작성을 요청할 때 이 Agent를 선택해요."
@@ -185,8 +185,42 @@ async def run_case(label: str, user_input: str) -> None:
     print("output:", result.final_output)
 
 async def main() -> None:
-    for case in TEST_CASES:
-        await run_case(case["label"], case["input"])
+    # for case in TEST_CASES:
+    #     await run_case(case["label"], case["input"])
+    triage_agent = Agent(
+        name="ResumeTriageAgent",
+        instructions="""
+당신은 자소서 도우미의 접수 담당입니다.
+
+규칙:
+- 분석, 결함 탐지, ResumeAnalysis 요청은 분석 Specialist로 넘겨요.
+- 문장 개선, 첨삭 요청은 첨삭 Specialist로 넘겨요.
+- 최종본, 제출용 문단 요청은 최종본 Specialist로 넘겨요.
+- 직접 길게 답하지 말고 요청 유형에 따라 적합한 Specialist를 선택해요.
+""",
+        handoffs=[analyze_handoff, revise_handoff, final_handoff],
+        input_guardrails=[resume_input_guardrail],
+        model=MODEL_NAME,
+    )
+
+    test_requests = [
+        # 분석 요청
+        "아래 자소서를 ResumeAnalysis 5필드 기준으로 분석하고 결함을 찾아줘. "
+        "저는 팀 프로젝트에서 로그인 API 오류를 정리했고, 재발 방지를 위해 문서화했습니다.",
+
+        # 첨삭 요청
+        "아래 문장을 STAR 기준으로 첨삭해줘. "
+        "저는 항상 열심히 노력했고 팀에서 최선을 다했습니다.",
+
+        # 최종본 요청
+        "첨삭 제안을 반영해서 제출용 최종 문단으로 완성해줘. "
+        "문제를 발견하고 문서화해 재발을 막은 경험을 중심으로 써줘.",
+    ]
+
+    for index, request in enumerate(test_requests, start=1):
+        result = await Runner.run(triage_agent, request)
+        print(f"[테스트 {index}] 담당 Agent:", result.last_agent.name)
+        print(result.final_output[:200])
 
 if __name__ == "__main__":
     check_env()
