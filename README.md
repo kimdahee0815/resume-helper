@@ -66,8 +66,8 @@ MODEL_CLAUDE=claude-haiku-4-5-20251001
 
 - 저장소 공개 범위: Public
 - 마지막 commit 메시지: Finalize resume helper submission
-- push 시각: 실행 당일 기재
-- push 결과: 성공 / 로컬 제출 대체
+- push 시각: 2026.06.05 5:28pm
+- push 결과: 성공
 - 로컬 제출 대체 사유: 해당 없음
 - 민감 파일 점검: **`.env`**, 자소서 원문, 실행 로그가 commit에 포함되지 않음
 
