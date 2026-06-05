@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from anthropic import Anthropic
+from day3_self2_resume_mcp import analyze_resume, save_analysis
+from day5_self1_resume_pipeline import check_blind_risks, format_blind_report
 from styles import STYLE_PRESETS, list_style_names
 
 
@@ -83,6 +85,7 @@ def ask_claude_once(sample_text: str) -> str:
     return response.content[0].text
 
 def chat_loop():
+    global RESUME_SYSTEM_PROMPT
     print("자소서 도우미를 시작합니다. /help로 도움말, /quit으로 종료합니다.")
     client = make_openai_client()
     while True:
@@ -94,7 +97,8 @@ def chat_loop():
             help_text = """
                 [사용 방법]
                 - 자기소개서 문단을 그대로 붙여 넣으면 AI가 첨삭 제안을 드립니다.
-                - /sample : 예시 자소서로 테스트합니다.
+                - /style  : 자소서 첨삭 스타일을 안내합니다.
+                - /analyze : 자소서의 결함 분석, 블라인드 위반, 키워드 매칭 결과를 분석합니다.
                 - /quit   : 프로그램을 종료합니다.
 
                 [주의]
@@ -110,8 +114,31 @@ def chat_loop():
         
         elif command.startswith("/style"):
             current_style = handle_style_command(user_input=user_input)
-            RESUME_SYSTEM_PROMPT = STYLE_PRESETS[current_style]["system"]
+            if current_style:   
+                RESUME_SYSTEM_PROMPT = STYLE_PRESETS[current_style]["system"]
+                
+        elif command == "/analyze":
+            resume_text = input("자소서 원문: ").strip()
+            keyword_text = input("NCS/JD 키워드(쉼표 구분): ").strip()
 
+            # 분석 실행
+            analysis = analyze_resume(resume_text=resume_text, raw_keywords=keyword_text)
+
+            # 결과 출력
+            print(f"\n분석 점수: {analysis.score}")
+            print(f"결함 수: {len(analysis.defects)}")
+            print(f"결함 목록: {analysis.defects}")
+            print(f"키워드 매칭: {analysis.keyword_match}")
+            print(f"블라인드 위반: {analysis.blind_violations}")
+
+            # JSON 저장
+            save_analysis(analysis)
+
+        elif command == "/blind":
+            resume_text = input("점검할 자소서를 붙여넣으세요: ")
+            found = check_blind_risks(resume_text)
+            print(format_blind_report(found))
+    
         elif not command:
             print("텍스트를 입력해 주세요. 도움말은 /help")
             continue
@@ -150,6 +177,7 @@ current_style_key = "간결형"
 #     return current_style_key
 
 def handle_style_command(user_input: str) -> None:
+    global RESUME_SYSTEM_PROMPT
     parts = user_input.split(maxsplit=1)
     if len(parts) < 2:
         print("사용 가능한 스타일:", ", ".join(STYLE_PRESETS.keys()))
