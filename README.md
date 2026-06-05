@@ -64,7 +64,7 @@ MODEL_CLAUDE=claude-haiku-4-5-20251001
 
 ## 제출 기록
 
-- 저장소 공개 범위: Private
+- 저장소 공개 범위: Public
 - 마지막 commit 메시지: Finalize resume helper submission
 - push 시각: 실행 당일 기재
 - push 결과: 성공 / 로컬 제출 대체
