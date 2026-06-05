@@ -2,7 +2,15 @@
 .venv/
 __pycache__/
 chat_history.json
+analyze_result.json
+*.pyc
+
+# 자소서 원문과 민감 결과물
+*.txt
 resumes/
 outputs/*.json
-*.txt
-analyze_result.json
+outputs/*.log
+logs/
+
+# 로컬 제출 압축 파일
+submit_local/
